@@ -1,0 +1,189 @@
+<html>
+
+<head>
+  <title>Baritone Short Cuts</title>
+  <style type="text/css">
+    @font-face {
+      font-family: 'Montserrat';
+      font-style: normal;
+      font-weight: 200;
+      src: local('Montserrat-Regular'), url(Montserrat.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+    }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: #272727;
+      padding: 32px;
+      margin: 0;
+      overflow: hidden;
+      -webkit-user-select: none;
+      color: #fff;
+      text-align: center;
+    }
+
+    a {
+      color: #6f6f6f !important;
+    }
+
+    #baritone {
+      font-size: 24px;
+    }
+
+    #author {
+      color: #6f6f6f;
+    }
+
+    #attribution {
+      margin-top: 32px;
+      font-size: 14px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .input-wrapper input {
+      position: relative;
+      z-index: 1;
+      opacity: 0;
+      width: 250px;
+      height: 30px;
+    }
+
+    .input-wrapper span {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border: 1px solid silver;
+      top: 0;
+      left: 0;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="item">
+    Play / Pause
+    <div class="input-wrapper">
+      <input type="text" name="playpause" />
+      <span>
+    </div>
+  </div>
+  <div class="item">
+    Next
+    <div class="input-wrapper">
+      <input type="text" name="skip" />
+      <span>
+    </div>
+  </div>
+  <div class="item">
+    Previews
+    <div class="input-wrapper">
+      <input type="text" name="playpause" />
+      <span>
+    </div>
+  </div>
+
+  <script>
+    var ipc = require("electron").ipcRenderer;
+
+    let shortcuts = {};
+
+    function sendShortcuts() {
+      ipc.send('shortcutsUpdated', shortcuts);
+    }
+
+    function print(span, shortcut, name) {
+      const finalShortcut = shortcut.join('+');
+
+      span.innerHTML = finalShortcut;
+      shortcuts[name] = finalShortcut;
+
+      for (let type in shortcuts) {
+        if (type != name && shortcuts[type] == shortcuts[name]) {
+          shortcuts[type] = '';
+          print(document.querySelector(`[name="${type}"] + span`), shortcuts[type]);
+        }
+      }
+    }
+
+    function cleanCode(key) {
+      return key.replace('Key', '').replace(/left|right/i, '');
+    }
+
+    function isCodeValid(shortcut, code) {
+      if (shortcut.length == 0) {
+        return true;
+      }
+
+      if (shortcut.includes(code)) {
+        return false;
+      }
+
+      if (shortcut.indexOf(code) > -1) {
+        return false;
+      }
+
+      if (code.length == 1) {
+        for (let i = 0; i < shortcut.length; i++) {
+          if (shortcut[i].length == 1) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+    function init() {
+      Array.prototype.forEach.call(document.querySelectorAll('.item'), item => {
+        let input = item.querySelector('input'),
+            span = item.querySelector('span'),
+            name = input.getAttribute('name'),
+            shortcut = [];
+
+        input.addEventListener('focus', e => {
+          shortcut = [];
+          print(span, shortcut, name);
+        });
+
+        input.addEventListener('keydown', e => {
+          const code = cleanCode(e.code);
+          if (isCodeValid(shortcut, code)) {
+            shortcut.push(code);
+            print(span, shortcut, name);
+          }
+        });
+
+        input.addEventListener('keyup', e => {
+          shortcut = [];
+          sendShortcuts();
+        });
+      });
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (e.which === 123) {
+        require('remote').getCurrentWindow().toggleDevTools();
+      } else if (e.which === 116) {
+        location.reload();
+      }
+    });
+
+    function updateShortcuts(shortcuts) {
+      for (let prop in shortcuts) {
+        print(document.querySelector)
+      }
+    }
+
+    ipc.on('shortcuts', (remoteShortcuts) => {
+      updateShortcuts(remoteShortcuts);
+    });
+
+    init();
+  </script>
+</body>
+
+</html>

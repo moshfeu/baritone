@@ -11,10 +11,14 @@ mb.setOption('height', 464);
 
 const spotify = require('./spotify.js');
 
-const ipcMain = require('electron').ipcMain;
+const {ipcMain, globalShortcut} = require('electron');
+
+const ElectronData = require('electron-data');
+let electronSettings;
 
 let settingsWindow;
 let aboutWindow;
+let shortCutsWindow;
 
 let appLauncher = new AutoLaunch({
   name: 'spotifymenubar'
@@ -30,6 +34,7 @@ const contextMenu = Menu.buildFromTemplate([
   /*{ label: 'Preferences', click: function() { openSettings(); } },*/
   { type: 'separator' },
   { label: 'Preferences', enabled: false },
+  { label: 'Short Cuts', click: () => openShortcuts() },
   { label: 'Launch on Login', type: 'checkbox', checked: false, click: function(item) {
     appLauncher.isEnabled().then(function(enabled) {
       if (enabled) {
@@ -81,17 +86,58 @@ function openAbout() {
   });
 }
 
+function openShortcuts() {
+  console.log('opening shortcuts');
+  shortCutsWindow = new BrowserWindow({width: 400, height: 320});
+  shortCutsWindow.loadURL('file://' + __dirname + '/shortcuts.html');
+  shortCutsWindow.once('show', () => {
+    console.log('window-show', electronSettings.get('shortcuts'));
+    shortCutsWindow.webContents.send('shortcuts', electronSettings.get('shortcuts'));
+  });
+  shortCutsWindow.on('closed', function () {
+    shortCutsWindow = null;
+  });
+}
+
+function registerGlobalShortcuts() {
+  globalShortcut.unregisterAll();
+  const shortcuts = electronSettings.get('shortcuts');
+  console.log('>>>registerGlobalShortcuts', shortcuts);
+  for (let prop in shortcuts) {
+    globalShortcut.register(shortcuts[prop], () => {
+      ipcMain.emit(prop);
+    });
+  }
+
+  // globalShortcut.register('Control+Shift+Space', () => {
+  //     ipcMain.emit('playpause');
+  //   });
+}
+
 mb.on('ready', function ready() {
   console.log('app is ready');
   spotify.init();
   mb.tray.on('right-click', function() {
     mb.tray.popUpContextMenu(contextMenu);
   });
+
+  electronSettings = new ElectronData({
+    path: mb.app.getPath('userData'),
+    filename: 'shortcuts'
+  });
+
+  registerGlobalShortcuts();
 });
 
 mb.on('after-create-window', function() {
   spotify.setWindow(mb.window);
   mb.window.webContents.send('settings', settings);
+});
+
+ipcMain.on('shortcutsUpdated', function(event, shortcuts) {
+  console.log('>>>>>shortcuts', shortcuts);
+  electronSettings.set('shortcuts', shortcuts)
+  registerGlobalShortcuts();
 });
 
 ipcMain.on('seek', function(event, percent) {

@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "auto-launch": "^2.0.1",
+    "electron-data": "^1.2.1",
     "font-awesome": "^4.6.1",
     "menubar": "latest"
   },
